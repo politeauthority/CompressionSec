@@ -32,6 +32,9 @@ class Compress(object):
         folder_name = self.args.file.split('/')
         folder_name = folder_name[len(folder_name) - 1]
         folder_name = folder_name.split('.')[0]
+        if not self.args.password and self.args.command_line_ran:
+            print 'we should prompt for a password'
+            # @todo
         try:
             os.mkdir(folder_name)
             zipfile.ZipFile(self.args.file).extractall(pwd=self.args.password)
@@ -88,7 +91,6 @@ class Compress(object):
             print 'Wrote Zipfile: %s' % zip_file_name
 
         # Remove files and folder we zipped
-
         if os.path.exists(zip_file_name):
             if self.args.verbosity:
                 print 'Removing unencrypted originals'
