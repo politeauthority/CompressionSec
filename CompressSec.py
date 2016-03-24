@@ -28,8 +28,8 @@ class Compress(object):
 
     def unzip(self):
         if self.args.verbosity:
-            print 'Unzipping: %s' % zip_file
-        folder_name = zip_file.split('/')
+            print 'Unzipping: %s' % self.args.file
+        folder_name = self.args.file.split('/')
         folder_name = folder_name[len(folder_name) - 1]
         folder_name = folder_name.split('.')[0]
         try:
@@ -52,25 +52,31 @@ class Compress(object):
                 zip_file_name = fp[fp.rfind('/'):]
                 if zip_file_name == '/':
                     zip_file_name = fp.replace('/', '')
-                zip_file_name += '.zip'
-            print zip_file_name
+            else:
+                zip_file_name = fp
+        zip_file_name += '.zip'
+        if os.path.exists(zip_file_name):
+            zip_file_name += '.2'
 
-        files = os.walk(self.args.file)
+        to_zip_is_dir = os.path.isdir(self.args.file)
+        if to_zip_is_dir:
+            files = os.walk(self.args.file)
+            paths = []
+            for root, dirs, files in os.walk(self.args.file):
+                for file in files:
+                    paths.append(root + '/' + file)
 
-        paths = []
-        for root, dirs, files in os.walk(self.args.file):
-            for file in files:
-                paths.append(root + '/' + file)
-
-        path_string = ''
-        for path in paths:
-            path_string = path_string + path + ' '
-        path_string = path_string[0: len(path_string) - 1]
+            path_string = ''
+            for path in paths:
+                path_string = path_string + path + ' '
+            path_string = path_string[0: len(path_string) - 1]
+        else:
+            path_string = self.args.file
 
         try:
             command = 'zip -e -P%s %s %s ' % (
                 self.args.password,
-                self.args.file,
+                zip_file_name,
                 path_string)
             print command
             subprocess.call(command, shell=True)
@@ -78,57 +84,18 @@ class Compress(object):
             print e
             sys.exit()
 
-        print 'Wrote Zipfile: %s' % zip_file_name
-        print ''
-        sys.exit()
+        if self.args.verbosity:
+            print 'Wrote Zipfile: %s' % zip_file_name
 
-    # Remove files and folder we zipped
-    # check to make sure a zip has been made that is bigger then 0k
-    # print 'Removing unencrypted originals'
-    # for f in paths:
-    #   os.remove( f )
-    #   print '  Removed: %s' % f
-    # os.rmdir( file_path )
+        # Remove files and folder we zipped
 
-
-def main(argv):
-    # Get the options
-    try:
-        opts, args = getopt.getopt(argv, "hzucn:v", ["help", "zip=", "unzip=", "password=", "name="])
-    except getopt.GetoptError:
-        usage()
-        sys.exit()
-    print args
-    password = False
-    for opt, arg in opts:
-        if opt in ("-p", "--password"):
-            password = arg
-            continue
-
-    if not password:
-        password = 'password'
-
-    # Main Routing Loop
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            usage()
-            sys.exit()
-
-        # Zip Operation
-        elif opt in ("-z", "--zip"):
-            folder_to_zip = arg
-            for opt, arg in opts:
-                if opt in ("-n", "--name"):
-                    zip(folder_to_zip, password, arg)
-            zip(folder_to_zip, password, arg)
-
-        # Unzip Operation
-        elif opt in ("-u", "--unzip"):
-            folder_to_unzip = arg
-            unzip(folder_to_unzip, password)
-
-        else:
-            usage()
+        if os.path.exists(zip_file_name):
+            if self.args.verbosity:
+                print 'Removing unencrypted originals'
+            if to_zip_is_dir:
+                os.rmdir(self.args.file)
+            else:
+                os.remove(self.args.file)
 
 
 def usage():
@@ -146,7 +113,12 @@ def usage():
 def parse_args(args):
     parser = ArgumentParser(description='')
     parser.add_argument('file', default=False, help='File/Folder or zip file to zip or unzip.')
-    parser.add_argument('-v', '--verbosity', action='store_true', default=False, help='Sets Verbosity')
+    parser.add_argument(
+        '-v',
+        '--verbosity',
+        action='store_true',
+        default=False,
+        help='Sets Verbosity')
     parser.add_argument('-p', '--password', default=False, help='Password for zip')
     parser.add_argument('-n', '--name', default=False, help='Tables to pulldown')
 
